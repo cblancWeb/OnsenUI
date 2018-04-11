@@ -16,6 +16,7 @@ limitations under the License.
 */
 
 import onsElements from '../ons/elements';
+import animit from '../ons/animit';
 import util from '../ons/util';
 import styler from '../ons/styler';
 import autoStyle from '../ons/autostyle';
@@ -132,8 +133,6 @@ export default class ListItemElement extends BaseElement {
     const re = /^ons-(?!col$|row$|if$)/i;
     this._shouldIgnoreTap = e => e.hasAttribute('prevent-tap') || re.test(e.tagName);
 
-    this._expanded = false;
-
     contentReady(this, () => {
       this._compile();
     });
@@ -143,13 +142,14 @@ export default class ListItemElement extends BaseElement {
     autoStyle.prepare(this);
 
     this.classList.add(defaultClassName);
-    if (this.hasAttribute('expandable')) {
-      this.classList.add('not-expanded');
+
+    if(this.hasAttribute('expandable')) {
+      this.classList.add('list-item--expandable');
     }
 
-    let left, center, right, expandableContent;
+    this._animationDuration = this.getAttribute('animation') === 'none' ? 0 : 0.2;
 
-    this._top = document.createElement('div');
+    let left, center, right, expandableContent;
 
     for (let i = 0; i < this.children.length; i++) {
       const el = this.children[i];
@@ -180,6 +180,7 @@ export default class ListItemElement extends BaseElement {
         right.classList.add('right');
 
         this._expandIcon = document.createElement('ons-icon');
+        this._expandIcon.classList.add('list-item__expandable-icon');
         this._expandIcon.setAttribute('icon', 'ion-chevron-down');
         right.appendChild(this._expandIcon);
       }
@@ -196,21 +197,27 @@ export default class ListItemElement extends BaseElement {
           }
         }
       }
+
+      if(!expandableContent) {
+        this.insertBefore(center, right || null);
+      }
     }
 
-    center.classList.add('center');
-    center.classList.add('list-item__center');
+    center.classList.add('center', 'list-item__center');
 
-    this._top.classList.add('top');
-    this._top.classList.add('list-item__top');
-    this.appendChild(this._top);
+    if(expandableContent) {
+      this._expandableContent = expandableContent;
+      this._top = document.createElement('div');
+      this._top.classList.add('top', 'list-item__top');
+      this.appendChild(this._top);
 
-    this._top.appendChild(center);
-    if (left) {
-      this._top.appendChild(left);
-    }
-    if (right) {
-      this._top.appendChild(right);
+      this._top.appendChild(center);
+      if (left) {
+        this._top.appendChild(left);
+      }
+      if (right) {
+        this._top.appendChild(right);
+      }
     }
 
     util.updateRipple(this);
@@ -218,24 +225,61 @@ export default class ListItemElement extends BaseElement {
     ModifierUtil.initModifier(this, scheme);
   }
 
-  show() {
-    if (this.hasAttribute('expandable')) {
-      this.classList.remove('not-expanded');
-      this._expanded = true;
-      if (this._expandIcon) {
-        this._expandIcon.setAttribute('icon', 'ion-chevron-up');
-      }
+  showExpansion() {
+    if (this.hasAttribute('expandable') && !this._expanding) {
+      this._expanding = true;
+      this.classList.add('expanded');
+      this._animateExpansion(true, () => {
+        this._expanding = false;
+      });
     }
   }
 
-  hide() {
-    if (this.hasAttribute('expandable')) {
-      this.classList.add('not-expanded');
-      this._expanded = false;
-      if (this._expandIcon) {
-        this._expandIcon.setAttribute('icon', 'ion-chevron-down');
-      }
+  hideExpansion() {
+    if (this.hasAttribute('expandable') && !this._expanding) {
+      this._expanding = true;
+      this._animateExpansion(false, () => {
+        this.classList.remove('expanded');
+        this._expanding = false;
+      });
     }
+  }
+
+  // toggle expanded content
+  _toggleExpansion() {
+    this.classList.contains('expanded') ? this.hideExpansion() : this.showExpansion();
+  }
+
+  _animateExpansion(doOpen, callback) {
+    this._expandableContent.style.height = 'auto';
+    const elStyle = window.getComputedStyle(this._expandableContent);
+    const closedDimensions = { height: 0, paddingTop: 0, paddingBottom: 0 };
+    const openedDimensions = {
+      height: elStyle.height,
+      paddingTop: elStyle.paddingTop,
+      paddingBottom: elStyle.paddingBottom,
+    };
+    this._expandableContent.style.height = '';
+
+    let startDimensions, endDimensions;
+    if(doOpen) {
+      startDimensions = closedDimensions;
+      endDimensions = openedDimensions;
+    } else {
+      startDimensions = openedDimensions;
+      endDimensions = closedDimensions;
+    }
+
+    animit(this._expandableContent, { duration: this._animationDuration, property: 'height padding-top padding-bottom' })
+      .default(startDimensions, endDimensions)
+      .play(callback);
+
+    animit(this._expandIcon)
+      .queue(
+        { transform: `rotate(${doOpen ? 180 : 0}deg)` },
+        { duration: this._animationDuration, property: 'transform' }
+      )
+      .play();
   }
 
   static get observedAttributes() {
@@ -277,13 +321,10 @@ export default class ListItemElement extends BaseElement {
     this[action]('mousedown', this._onTouch);
     this[action]('mouseup', this._onRelease);
     this[action]('mouseout', this._onRelease);
-    this._top[action]('touchstart', this._toggle.bind(this));
-    this._top[action]('mousedown', this._toggle.bind(this));
-  }
 
-  // toggle expanded content
-  _toggle() {
-    this._expanded ? this.hide() : this.show();
+    if(this._top) {
+      this._top[action]('mousedown', this._toggleExpansion.bind(this));
+    }
   }
 
   _onDrag(event) {
