@@ -29,16 +29,37 @@
 
     <ons-list-title>Tappable List</ons-list-title>
     <ons-list>
-      <ons-list-item expandable nodivider>
-        One
-        <div class="expandable-content">Hello!<br><br>Hi again!</div>
-      </ons-list-item>
       <ons-list-item tappable>One</ons-list-item>
       <ons-list-item tappable>
         <div class="left"><ons-checkbox></ons-checkbox><ons-switch></ons-switch></div>
         <div class="center">Two -<span prevent-tap>- Not here</span><ons-button>Not here</ons-button></div>
       </ons-list-item>
       <ons-list-item tappable>Three</ons-list-item>
+    </ons-list>
+
+    <br>
+
+    <ons-list-title>Expandable List Items</ons-list-title>
+    <ons-list>
+      <ons-list-item expandable>
+        Tap to expand
+        <div class="expandable-content">
+          I have been expanded!
+        </div>
+      </ons-list-item>
+      <ons-list-item expandable tappable>
+        Tap to expand (tappable)
+        <div class="expandable-content">
+          Expanded text
+        </div>
+      </ons-list-item>
+      <ons-list-item expandable>
+        Expandable with custom icon
+        <div class="right">...</div>
+        <div class="expandable-content">
+          I have also been expanded!
+        </div>
+      </ons-list-item>
     </ons-list>
 
     <br>
