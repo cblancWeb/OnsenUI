@@ -45,11 +45,11 @@ export class SlideListItemAnimator extends ListItemAnimator {
     // To animate the opening of the expansion panel correctly, we need to know its
     // height. To calculate this, we set its height to auto, and then get the computed
     // height and padding. Once this is done, we set the height back to its original value.
-    const oldHeight = listItem._expandableContent.style.height;
-    const oldDisplay = listItem._expandableContent.style.display;
-    listItem._expandableContent.style.height = 'auto';
-    listItem._expandableContent.style.display = 'block';
-    const computedStyle = window.getComputedStyle(listItem._expandableContent);
+    const oldHeight = listItem.expandableContent.style.height;
+    const oldDisplay = listItem.expandableContent.style.display;
+    listItem.expandableContent.style.height = 'auto';
+    listItem.expandableContent.style.display = 'block';
+    const computedStyle = window.getComputedStyle(listItem.expandableContent);
 
     const expansionOpenTransition = [
       { height: 0, paddingTop: 0, paddingBottom: 0 },
@@ -59,23 +59,23 @@ export class SlideListItemAnimator extends ListItemAnimator {
         paddingBottom: computedStyle.paddingBottom,
       }
     ];
-    const iconOpenTransition = [{transform: 'rotate(0deg)'}, {transform: 'rotate(180deg)'}];
+    const iconOpenTransition = [{transform: 'rotate(45deg)'}, {transform: 'rotate(225deg)'}];
 
     // Now that we have the values we need, reset the height back to its original state
-    listItem._expandableContent.style.height = oldHeight;
+    listItem.expandableContent.style.height = oldHeight;
 
-    animit.runAll(
-      animit(listItem._expandIcon, { duration: this.duration, property: 'transform' })
-        .default(...(shouldOpen ? iconOpenTransition : iconOpenTransition.reverse())),
+    animit(listItem.expandableContent, { duration: this.duration, property: 'height padding-top padding-bottom' })
+      .default(...(shouldOpen ? expansionOpenTransition : expansionOpenTransition.reverse()))
+      .play(() => {
+        listItem.expandableContent.style.display = oldDisplay;
+        callback && callback();
+      });
 
-      animit(listItem._expandableContent, { duration: this.duration, property: 'height padding-top padding-bottom' })
-        .default(...(shouldOpen ? expansionOpenTransition : expansionOpenTransition.reverse()))
-        .queue(done => {
-          listItem._expandableContent.style.display = oldDisplay;
-          callback && callback();
-          done()
-        })
-    );
+    if(listItem.expandChevron) {
+      animit(listItem.expandChevron, { duration: this.duration, property: 'transform' })
+        .default(...(shouldOpen ? iconOpenTransition : iconOpenTransition.reverse()))
+        .play();
+    }
   }
 
 }

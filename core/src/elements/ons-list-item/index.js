@@ -178,19 +178,19 @@ export default class ListItemElement extends BaseElement {
       }
     }
 
+    if (!right && this.hasAttribute('expandable')) {
+      right = document.createElement('div');
+      right.classList.add('list-item__right', 'right');
+
+      // We cannot use a pseudo-element for this chevron, as we cannot animate it using
+      // JS. So, we make a chevron span instead.
+      const chevron = document.createElement('span');
+      chevron.classList.add('list-item__expand-chevron');
+      right.appendChild(chevron);
+    }
+
     if (!center) {
       center = document.createElement('div');
-
-      if (!right && this.hasAttribute('expandable')) {
-        right = document.createElement('div');
-        right.classList.add('list-item__right');
-        right.classList.add('right');
-
-        this._expandIcon = document.createElement('ons-icon');
-        this._expandIcon.classList.add('list-item__expandable-icon');
-        this._expandIcon.setAttribute('icon', 'ion-chevron-down');
-        right.appendChild(this._expandIcon);
-      }
 
       if (!left && !right && !expandableContent) {
         while (this.childNodes[0]) {
@@ -213,7 +213,6 @@ export default class ListItemElement extends BaseElement {
     center.classList.add('center', 'list-item__center');
 
     if(expandableContent) {
-      this._expandableContent = expandableContent;
       this._top = document.createElement('div');
       this._top.classList.add('top', 'list-item__top');
       this.appendChild(this._top);
@@ -270,7 +269,15 @@ export default class ListItemElement extends BaseElement {
   }
 
   static get observedAttributes() {
-    return ['modifier', 'class', 'ripple'];
+    return ['modifier', 'class', 'ripple', 'animation'];
+  }
+
+  get expandableContent() {
+    return this.querySelector('.list-item__expandable-content');
+  }
+
+  get expandChevron() {
+    return this.querySelector('.list-item__expand-chevron');
   }
 
   attributeChangedCallback(name, last, current) {
