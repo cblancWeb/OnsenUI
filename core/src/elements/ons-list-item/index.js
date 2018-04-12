@@ -320,7 +320,7 @@ export default class ListItemElement extends BaseElement {
     this[action]('mouseout', this._onRelease);
 
     if(this._top) {
-      this._top[action]('mousedown', this.toggleExpansion.bind(this));
+      this._top[action]('click', this.toggleExpansion.bind(this));
     }
   }
 
