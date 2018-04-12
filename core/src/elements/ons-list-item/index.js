@@ -15,14 +15,16 @@ limitations under the License.
 
 */
 
-import onsElements from '../ons/elements';
-import animit from '../ons/animit';
-import util from '../ons/util';
-import styler from '../ons/styler';
-import autoStyle from '../ons/autostyle';
-import ModifierUtil from '../ons/internal/modifier-util';
-import BaseElement from './base/base-element';
-import contentReady from '../ons/content-ready';
+import onsElements from '../../ons/elements';
+import animit from '../../ons/animit';
+import util from '../../ons/util';
+import styler from '../../ons/styler';
+import autoStyle from '../../ons/autostyle';
+import ModifierUtil from '../../ons/internal/modifier-util';
+import AnimatorFactory from '../../ons/internal/animator-factory';
+import { ListItemAnimator, SlideListItemAnimator } from './animator';
+import BaseElement from '../base/base-element';
+import contentReady from '../../ons/content-ready';
 
 const defaultClassName = 'list-item';
 const scheme = {
@@ -35,6 +37,11 @@ const scheme = {
   '.list-item__subtitle': 'list-item--*__subtitle',
   '.list-item__thumbnail': 'list-item--*__thumbnail',
   '.list-item__icon': 'list-item--*__icon'
+};
+
+const _animatorDict = {
+  'default': SlideListItemAnimator,
+  'none': ListItemAnimator
 };
 
 /**
@@ -129,6 +136,8 @@ export default class ListItemElement extends BaseElement {
   constructor() {
     super();
 
+    this._animatorFactory = this._updateAnimatorFactory();
+
     // Elements ignored when tapping
     const re = /^ons-(?!col$|row$|if$)/i;
     this._shouldIgnoreTap = e => e.hasAttribute('prevent-tap') || re.test(e.tagName);
@@ -146,8 +155,6 @@ export default class ListItemElement extends BaseElement {
     if(this.hasAttribute('expandable')) {
       this.classList.add('list-item--expandable');
     }
-
-    this._animationDuration = this.getAttribute('animation') === 'none' ? 0 : 0.2;
 
     let left, center, right, expandableContent;
 
@@ -228,8 +235,10 @@ export default class ListItemElement extends BaseElement {
   showExpansion() {
     if (this.hasAttribute('expandable') && !this._expanding) {
       this._expanding = true;
-      this.classList.add('expanded');
-      this._animateExpansion(true, () => {
+
+      const animator = this._animatorFactory.newAnimator();
+      animator.showExpansion(this, () => {
+        this.classList.add('expanded');
         this._expanding = false;
       });
     }
@@ -238,48 +247,26 @@ export default class ListItemElement extends BaseElement {
   hideExpansion() {
     if (this.hasAttribute('expandable') && !this._expanding) {
       this._expanding = true;
-      this._animateExpansion(false, () => {
+
+      const animator = this._animatorFactory.newAnimator();
+      animator.hideExpansion(this, () => {
         this.classList.remove('expanded');
         this._expanding = false;
       });
     }
   }
 
-  // toggle expanded content
-  _toggleExpansion() {
+  toggleExpansion() {
     this.classList.contains('expanded') ? this.hideExpansion() : this.showExpansion();
   }
 
-  _animateExpansion(doOpen, callback) {
-    this._expandableContent.style.height = 'auto';
-    const elStyle = window.getComputedStyle(this._expandableContent);
-    const closedDimensions = { height: 0, paddingTop: 0, paddingBottom: 0 };
-    const openedDimensions = {
-      height: elStyle.height,
-      paddingTop: elStyle.paddingTop,
-      paddingBottom: elStyle.paddingBottom,
-    };
-    this._expandableContent.style.height = '';
-
-    let startDimensions, endDimensions;
-    if(doOpen) {
-      startDimensions = closedDimensions;
-      endDimensions = openedDimensions;
-    } else {
-      startDimensions = openedDimensions;
-      endDimensions = closedDimensions;
-    }
-
-    animit(this._expandableContent, { duration: this._animationDuration, property: 'height padding-top padding-bottom' })
-      .default(startDimensions, endDimensions)
-      .play(callback);
-
-    animit(this._expandIcon)
-      .queue(
-        { transform: `rotate(${doOpen ? 180 : 0}deg)` },
-        { duration: this._animationDuration, property: 'transform' }
-      )
-      .play();
+  _updateAnimatorFactory() {
+    return new AnimatorFactory({
+      animators: _animatorDict,
+      baseClass: ListItemAnimator,
+      baseClassName: 'ListItemAnimator',
+      defaultAnimation: this.getAttribute('animation') || 'default'
+    });
   }
 
   static get observedAttributes() {
@@ -296,6 +283,9 @@ export default class ListItemElement extends BaseElement {
         break;
       case 'ripple':
         util.updateRipple(this);
+        break;
+      case 'animation':
+        this._animatorFactory = this._updateAnimatorFactory();
         break;
     }
   }
@@ -323,7 +313,7 @@ export default class ListItemElement extends BaseElement {
     this[action]('mouseout', this._onRelease);
 
     if(this._top) {
-      this._top[action]('mousedown', this._toggleExpansion.bind(this));
+      this._top[action]('mousedown', this.toggleExpansion.bind(this));
     }
   }
 
